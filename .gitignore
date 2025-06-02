@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+env/
+ENV/
+*.env
+*.venv
+
+# Django stuff
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+
+# VS Code
+.vscode/
+
+# IDEs and editors
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# dotenv
+.env
+.env.*
+
+# Migrations (optional, depending on your strategy)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Coverage and testing
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+.pytest_cache/
+
+# pip-tools
+*.lock
+
+# MyPy
+.mypy_cache/
+
+# Django local settings (optional)
+local_settings.py
+
+# Docker
+*.pid
+
+# System Files
+Thumbs.db
