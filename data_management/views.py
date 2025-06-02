@@ -23,6 +23,38 @@ class DashboardView(View):
         
         devices = Device.objects.all()
         raw_data_count = RawData.objects.count()
+
+         # Calculate caching statistics with percentages
+        frequent = CachedData.objects.filter(cache_level='FREQUENT').count()
+        less_frequent = CachedData.objects.filter(cache_level='LESS_FREQUENT').count()
+        rare = CachedData.objects.filter(cache_level='RARE').count()
+        total_cached = frequent + less_frequent + rare
+        
+        cached_data_stats = {
+            'frequent': frequent,
+            'less_frequent': less_frequent,
+            'rare': rare,
+            'frequent_percent': round(frequent/total_cached*100, 1) if total_cached else 0,
+            'less_frequent_percent': round(less_frequent/total_cached*100, 1) if total_cached else 0,
+            'rare_percent': round(rare/total_cached*100, 1) if total_cached else 0,
+            'hit_rate': 85  # Simulated cache hit rate percentage
+        }
+        
+        # Calculate EC statistics
+        data_nodes = DataFragment.objects.filter(is_parity=False).count()
+        parity_nodes = DataFragment.objects.filter(is_parity=True).count()
+        total_fragments = data_nodes + parity_nodes
+        
+        ec_stats = {
+            'total_fragments': total_fragments,
+            'data_nodes': data_nodes,
+            'parity_nodes': parity_nodes,
+            'data_percent': round(data_nodes/total_fragments*100, 1) if total_fragments else 0,
+            'parity_percent': round(parity_nodes/total_fragments*100, 1) if total_fragments else 0,
+            'efficiency': round(data_nodes/(data_nodes+parity_nodes)*100, 1) if total_fragments else 0,
+            'redundancy': round((data_nodes+parity_nodes)/data_nodes, 1) if data_nodes else 0
+        }
+        
         cached_data_stats = {
             'frequent': CachedData.objects.filter(cache_level='FREQUENT').count(),
             'less_frequent': CachedData.objects.filter(cache_level='LESS_FREQUENT').count(),

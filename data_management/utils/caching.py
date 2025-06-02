@@ -49,17 +49,16 @@ class HierarchicalCache:
         cached_data.access_count += 1
         cached_data.last_accessed = timezone.now()
         
-        # Demote or promote based on access patterns
+        # More aggressive rebalancing
         if current_level == 'FREQUENT':
-            if cached_data.access_count < 3 and (timezone.now() - cached_data.last_accessed) > timedelta(minutes=5):
-                cached_data.cache_level = 'LESS_FREQUENT'
+            if cached_data.access_count < 5:  # Increased threshold
+                if (timezone.now() - cached_data.last_accessed) > timedelta(minutes=15):
+                    cached_data.cache_level = 'LESS_FREQUENT'
         elif current_level == 'LESS_FREQUENT':
-            if cached_data.access_count > 5:
+            if cached_data.access_count > 3:  # Lowered promotion threshold
                 cached_data.cache_level = 'FREQUENT'
-            elif (timezone.now() - cached_data.last_accessed) > timedelta(hours=1):
+            elif (timezone.now() - cached_data.last_accessed) > timedelta(hours=2):
                 cached_data.cache_level = 'RARE'
         else:  # RARE
-            if cached_data.access_count > 2:
+            if cached_data.access_count > 1:  # Easier promotion
                 cached_data.cache_level = 'LESS_FREQUENT'
-                
-        cached_data.save()
