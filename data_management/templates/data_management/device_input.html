@@ -25,6 +25,33 @@
                             </select>
                         </div>
                         
+                        <!-- Device Status Cards -->
+                        <div class="row mb-3" id="deviceStatusCards">
+                            {% for device in devices %}
+                            <div class="col-md-6 mb-2 device-card" data-device-id="{{ device.id }}" style="display: none;">
+                                <div class="card">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-0">{{ device.name }}</h6>
+                                                <small class="text-muted">{{ device.location }}</small>
+                                            </div>
+                                            <div class="device-status-indicator">
+                                                <span class="badge bg-success">Active</span>
+                                                <div class="spinner-border spinner-border-sm text-primary ms-2" role="status" style="display: none;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small>Last active: <span class="last-active">{{ device.last_active|timesince }} ago</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="autoGenerate" name="auto_generate">
@@ -46,6 +73,12 @@
                             <label for="num_records" class="form-label">Number of records to generate</label>
                             <input type="number" class="form-control" id="num_records" name="num_records" value="10" min="1" max="100">
                             <div class="form-text">Random data types will be generated</div>
+                            
+                            <!-- Generation Progress Bar -->
+                            <div class="progress mt-2" id="generationProgress" style="height: 20px; display: none;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                     style="width: 0%">0%</div>
+                            </div>
                         </div>
                         
                         <div class="d-flex gap-2">
@@ -60,10 +93,18 @@
         <!-- Right Column - Data History Section -->
         <div class="col-lg-6 col-md-12 mb-4">
             <div class="card h-100">
-                <div class="card-header bg-secondary text-white">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between">
                     <h5>Recent Data History</h5>
+                    <button class="btn btn-sm btn-light" id="refreshDataBtn">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
                 </div>
                 <div class="card-body">
+                    <!-- Data Chart -->
+                    <div class="mb-4">
+                        <canvas id="dataChart" height="200"></canvas>
+                    </div>
+                    
                     {% if recent_data %}
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
@@ -104,29 +145,167 @@
     </div>
 </div>
 
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="apiToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">API Response</strong>
+            <small>Just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            API request completed successfully!
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Chart
+    const ctx = document.getElementById('dataChart').getContext('2d');
+    const dataChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1,
+                    hidden: true
+                },
+                {
+                    label: 'Humidity (%)',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    hidden: true
+                },
+                {
+                    label: 'Pressure (hPa)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    hidden: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Recent Sensor Data'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+
+    // Update chart with recent data
+    function updateChart() {
+        const recentData = [
+            {% for data in recent_data %}
+            {
+                type: '{{ data.data.type }}',
+                value: {{ data.data.value }},
+                timestamp: '{{ data.timestamp|date:"H:i:s" }}',
+                unit: '{{ data.data.unit }}'
+            },
+            {% endfor %}
+        ];
+
+        const labels = recentData.map(d => d.timestamp).reverse();
+        const tempData = recentData.filter(d => d.type === 'temperature').map(d => d.value).reverse();
+        const humidityData = recentData.filter(d => d.type === 'humidity').map(d => d.value).reverse();
+        const pressureData = recentData.filter(d => d.type === 'pressure').map(d => d.value).reverse();
+
+        dataChart.data.labels = labels;
+        dataChart.data.datasets[0].data = tempData;
+        dataChart.data.datasets[1].data = humidityData;
+        dataChart.data.datasets[2].data = pressureData;
+        
+        // Show relevant datasets
+        dataChart.data.datasets[0].hidden = tempData.length === 0;
+        dataChart.data.datasets[1].hidden = humidityData.length === 0;
+        dataChart.data.datasets[2].hidden = pressureData.length === 0;
+        
+        dataChart.update();
+    }
+
+    updateChart();
+
+    // Device selection handler
+    const deviceSelect = document.getElementById('device_id');
+    deviceSelect.addEventListener('change', function() {
+        const selectedId = this.value;
+        document.querySelectorAll('.device-card').forEach(card => {
+            card.style.display = card.dataset.deviceId === selectedId ? 'block' : 'none';
+        });
+    });
+
+    // Toggle between manual and auto input
     const autoGenerate = document.getElementById('autoGenerate');
     const manualInput = document.getElementById('manualInput');
     const autoInput = document.getElementById('autoInput');
     const generateApiBtn = document.getElementById('generateApiBtn');
+    const generationProgress = document.getElementById('generationProgress');
+    const progressBar = generationProgress.querySelector('.progress-bar');
     
-    // Toggle between manual and auto input
     autoGenerate.addEventListener('change', function() {
         manualInput.style.display = this.checked ? 'none' : 'block';
         autoInput.style.display = this.checked ? 'block' : 'none';
     });
-    
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshDataBtn');
+    refreshBtn.addEventListener('click', function() {
+        window.location.reload();
+    });
+
+    // Toast notification
+    const apiToast = new bootstrap.Toast(document.getElementById('apiToast'));
+
     // Handle API generation
     generateApiBtn.addEventListener('click', function() {
         const deviceSelect = document.getElementById('device_id');
         if (!deviceSelect.value) {
-            alert('Please select a device first');
+            showToast('Please select a device first', 'danger');
             deviceSelect.focus();
             return;
         }
         
         const numRecords = document.getElementById('num_records')?.value || 10;
+        const deviceCard = document.querySelector(`.device-card[data-device-id="${deviceSelect.value}"]`);
+        const spinner = deviceCard?.querySelector('.spinner-border');
+        const statusBadge = deviceCard?.querySelector('.badge');
+        
+        if (spinner && statusBadge) {
+            spinner.style.display = 'inline-block';
+            statusBadge.classList.remove('bg-success');
+            statusBadge.classList.add('bg-warning');
+            statusBadge.textContent = 'Processing';
+        }
+        
+        // Show progress bar
+        if (autoGenerate.checked) {
+            generationProgress.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+        }
         
         fetch('/api/generate-data/', {
             method: 'POST',
@@ -146,13 +325,59 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(data => {
-            alert(data.message);
-            window.location.reload(); // Refresh to show new data
+            // Simulate progress for auto-generation
+            if (autoGenerate.checked) {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.textContent = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        showToast(data.message, 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                }, 200);
+            } else {
+                showToast(data.message, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+            
+            if (spinner && statusBadge) {
+                spinner.style.display = 'none';
+                statusBadge.classList.remove('bg-warning');
+                statusBadge.classList.add('bg-success');
+                statusBadge.textContent = 'Active';
+            }
         })
         .catch(error => {
-            alert('Error: ' + error.message);
+            showToast('Error: ' + error.message, 'danger');
+            if (spinner && statusBadge) {
+                spinner.style.display = 'none';
+                statusBadge.classList.remove('bg-warning');
+                statusBadge.classList.add('bg-danger');
+                statusBadge.textContent = 'Error';
+            }
+            generationProgress.style.display = 'none';
         });
     });
+
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('apiToast');
+        const toastBody = document.getElementById('toastMessage');
+        
+        // Set appropriate colors
+        toast.querySelector('.toast-header').className = 'toast-header';
+        toast.querySelector('.toast-header').classList.add(`bg-${type}`, 'text-white');
+        
+        toastBody.textContent = message;
+        apiToast.show();
+    }
 });
 </script>
 {% endblock %}
