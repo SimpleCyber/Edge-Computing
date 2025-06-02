@@ -88,7 +88,24 @@
                     </form>
                 </div>
             </div>
+
+                <!-- Data Chart -->
+        <div class="mb-4  mt-4 card">
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2">
+                <h6 class="mb-0">Recent Sensor Data</h6>
+                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="popover" 
+                        title="Graph Explanation" data-bs-content="This graph shows the latest sensor readings over time. Each line represents a different sensor type (temperature, humidity, pressure). The x-axis shows timestamps and the y-axis shows the measured values. Hover over points to see exact values.">
+                    <i class="bi bi-question-circle"></i> Help
+                </button>
+            </div>
+            <canvas id="dataChart" height="200"></canvas>
         </div>
+
+
+        </div>
+
+    
+
 
         <!-- Right Column - Data History Section -->
         <div class="col-lg-6 col-md-12 mb-4">
@@ -100,11 +117,12 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    <!-- Data Chart -->
-                    <div class="mb-4">
-                        <canvas id="dataChart" height="200"></canvas>
-                    </div>
+
+
+
                     
+
+
                     {% if recent_data %}
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
@@ -162,6 +180,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+
+    // Initialize popovers
+    const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+
     // Initialize Chart
     const ctx = document.getElementById('dataChart').getContext('2d');
     const dataChart = new Chart(ctx, {
