@@ -41,3 +41,13 @@ class LocalModelUpdate(models.Model):
     global_model = models.ForeignKey(GlobalModel, on_delete=models.CASCADE)
     gradients = models.BinaryField()  # Serialized gradients
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# Add to models.py
+class PerformanceMetrics(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    edge_processing_time = models.FloatField()  # in milliseconds
+    cloud_processing_time = models.FloatField()  # in milliseconds (simulated)
+    data_transfer_size = models.FloatField()  # in KB
+    raw_storage_size = models.FloatField()  # in KB
+    encoded_storage_size = models.FloatField()  # in KB

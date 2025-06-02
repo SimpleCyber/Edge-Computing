@@ -52,23 +52,29 @@ class ReedSolomonEC:
         original_data = b''.join(bytes(chunk) for chunk in original_chunks)
         return original_data.rstrip(b'\0')
 
+# erasure_coding.py
 def store_with_ec(raw_data_id):
     raw_data = RawData.objects.get(pk=raw_data_id)
     data_bytes = str(raw_data.data).encode('utf-8')
+    original_size = len(data_bytes)
     
     ec = ReedSolomonEC(k=4, m=2)
     fragments = ec.encode(data_bytes)
     
+    total_fragment_size = 0
     for i, (fragment_id, fragment_data) in enumerate(fragments):
+        total_fragment_size += len(fragment_data)
         DataFragment.objects.create(
             original_data=raw_data,
             fragment_id=fragment_id,
             fragment_data=fragment_data,
-            storage_node=f"edge_node_{i%3}",  # Distribute across 3 simulated nodes
-            is_parity=(i >= 4)  # First 4 are data, last 2 are parity
+            storage_node=f"edge_node_{i%3}",
+            is_parity=(i >= 4)
         )
         
-    return len(fragments)
+    # Calculate and store storage efficiency
+    efficiency = (original_size / total_fragment_size) * 100
+    return efficiency
 
 def recover_data(raw_data_id):
     fragments = list(DataFragment.objects.filter(original_data_id=raw_data_id)

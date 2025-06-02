@@ -118,9 +118,9 @@
                 <button id="processBtn" class="btn btn-success mb-2">Run Processing Cycle</button>
                 <div class="mt-3">
                     <h6>System Performance</h6>
-                    <p><strong>Latency Reduction:</strong> ~40-60% from edge processing</p>
-                    <p><strong>Bandwidth Savings:</strong> ~70% from local caching</p>
-                    <p><strong>Storage Savings:</strong> ~50% from erasure coding</p>
+                    <p><strong>Latency Reduction:</strong> ~{{ latency_reduction|default:"0" }}% from edge processing</p>
+                    <p><strong>Bandwidth Savings:</strong> ~{{ bandwidth_savings|default:"0" }}% from local caching</p>
+                    <p><strong>Storage Savings:</strong> ~{{ storage_efficiency|default:"0" }}% from erasure coding</p>
                 </div>
             </div>
         </div>
