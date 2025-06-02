@@ -20,6 +20,7 @@ if not Device.objects.exists():
 
 class DashboardView(View):
     def get(self, request):
+        
         devices = Device.objects.all()
         raw_data_count = RawData.objects.count()
         cached_data_stats = {
@@ -92,8 +93,11 @@ class SimulateDeviceView(View):
 class SimulateDeviceView(View):
     def get(self, request):
         devices = Device.objects.all()
+        recent_data = RawData.objects.select_related('device').order_by('-timestamp')[:20]  # Last 20 records
+        
         return render(request, 'data_management/device_input.html', {
             'devices': devices,
+            'recent_data': recent_data,
             'auto_generate': request.GET.get('auto') == 'true'
         })
         
