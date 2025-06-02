@@ -207,3 +207,48 @@ class AutoGenerateAPI(View):
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        
+
+
+
+
+
+class ProcessDataView(View):
+    def get(self, request):
+        processes = []
+        
+        # 1. Federated Learning Aggregation
+        processes.append("Starting Federated Learning aggregation...")
+        fl = SimpleFederatedLearning()
+        new_model = fl.aggregate_updates()
+        processes.append("Federated Learning completed - new global model version {}".format(new_model.version))
+        
+        # 2. Data Recovery Example
+        raw_data = RawData.objects.filter(is_processed=True).first()
+        if raw_data:
+            processes.append("Attempting data recovery for record ID {}...".format(raw_data.id))
+            recovered = recover_data(raw_data.id)
+            if recovered:
+                processes.append("Data recovery successful")
+            else:
+                processes.append("Data recovery failed")
+        
+        return JsonResponse({
+            'status': 'success',
+            'processes': processes
+        })
+    
+
+# Federated Learning Aggregation:
+
+# Collects all local model updates from edge devices
+
+# Averages the gradients to create a new global model
+
+# Stores the updated global model with an incremented version number
+
+# Data Recovery Example (if processed data exists):
+
+# Attempts to recover data using erasure coding fragments
+
+# Demonstrates the fault tolerance capability of the system

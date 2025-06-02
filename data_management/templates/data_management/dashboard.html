@@ -1,6 +1,30 @@
 {% extends "../base.html" %}
 
 {% block content %}
+
+<div class="modal fade" id="processModal" tabindex="-1" aria-labelledby="processModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="processModalLabel">Processing Cycle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="processLog">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mt-2">Starting processing cycle...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <div class="row">
     <div class="col-md-12">
         <h2>Edge Computing Data Management Dashboard</h2>
@@ -73,7 +97,7 @@
             </div>
             <div class="card-body">
                 <a href="{% url 'simulate_device' %}" class="btn btn-primary">Simulate Device Data</a>
-                <a href="{% url 'process_data' %}" class="btn btn-success">Run Processing Cycle</a>
+                <button id="processBtn" class="btn btn-success">Run Processing Cycle</button>
             </div>
         </div>
     </div>
@@ -116,4 +140,57 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const processBtn = document.querySelector('a[href="{% url 'process_data' %}"]');
+    
+    processBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('processModal'));
+        modal.show();
+        
+        // Update modal content
+        const processLog = document.getElementById('processLog');
+        processLog.innerHTML = `
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <p class="text-center mt-2">Starting processing cycle...</p>
+        `;
+        
+        // Make AJAX call
+        fetch("{% url 'process_data' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    let logContent = '<ul class="list-group">';
+                    data.processes.forEach(process => {
+                        logContent += `<li class="list-group-item">${process}</li>`;
+                    });
+                    logContent += '</ul>';
+                    processLog.innerHTML = logContent;
+                } else {
+                    processLog.innerHTML = `
+                        <div class="alert alert-danger">
+                            Error processing data: ${data.message || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                processLog.innerHTML = `
+                    <div class="alert alert-danger">
+                        Request failed: ${error.message}
+                    </div>
+                `;
+            });
+    });
+});
+</script>
+
 {% endblock %}
