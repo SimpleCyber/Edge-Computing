@@ -1,0 +1,119 @@
+{% extends "../base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Edge Computing Data Management Dashboard</h2>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5>System Overview</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Devices:</strong> {{ devices|length }}</p>
+                <p><strong>Raw Data Points:</strong> {{ raw_data_count }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5>Caching Statistics</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Frequent Data:</strong> {{ cached_data_stats.frequent }}</p>
+                <p><strong>Less Frequent:</strong> {{ cached_data_stats.less_frequent }}</p>
+                <p><strong>Rare Data:</strong> {{ cached_data_stats.rare }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5>Federated Learning</h5>
+            </div>
+            <div class="card-body">
+                {% if global_model %}
+                    <p><strong>Model Version:</strong> {{ global_model.version }}</p>
+                    <p><strong>Last Updated:</strong> {{ global_model.updated_at }}</p>
+                    <p><strong>Local Updates:</strong> {{ model_updates }}</p>
+                {% else %}
+                    <p>No global model initialized</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5>Erasure Coding Storage</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Total Fragments:</strong> {{ ec_stats.total_fragments }}</p>
+                <p><strong>Data Fragments:</strong> {{ ec_stats.data_nodes }}</p>
+                <p><strong>Parity Fragments:</strong> {{ ec_stats.parity_nodes }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5>Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'simulate_device' %}" class="btn btn-primary">Simulate Device Data</a>
+                <a href="{% url 'process_data' %}" class="btn btn-success">Run Processing Cycle</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Research Components Demonstrated</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Problem Statement</h6>
+                        <ul>
+                            <li>Edge data management challenges</li>
+                            <li>Limited resources</li>
+                            <li>Need for efficient processing</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Methodology</h6>
+                        <ul>
+                            <li>Hierarchical caching</li>
+                            <li>Federated learning</li>
+                            <li>Erasure coding</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Outcomes</h6>
+                        <ul>
+                            <li>Reduced latency</li>
+                            <li>Fault tolerance</li>
+                            <li>Privacy preservation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

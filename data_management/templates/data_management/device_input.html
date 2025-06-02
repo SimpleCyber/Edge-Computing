@@ -1,0 +1,106 @@
+{% extends "../base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4>Simulate Device Data Input</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" id="dataForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="device_id" class="form-label">Select Device</label>
+                        <select class="form-select" id="device_id" name="device_id" required>
+                            <option value="">-- Select a Device --</option>
+                            {% for device in devices %}
+                                <option value="{{ device.id }}">{{ device.name }} ({{ device.device_type }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoGenerate" name="auto_generate">
+                            <label class="form-check-label" for="autoGenerate">Auto-generate multiple records</label>
+                        </div>
+                    </div>
+                    
+                    <div id="manualInput" class="mb-3">
+                        <label for="data_type" class="form-label">Data Type</label>
+                        <select class="form-select" id="data_type" name="data_type">
+                            <option value="temperature">Temperature</option>
+                            <option value="humidity">Humidity</option>
+                            <option value="pressure">Pressure</option>
+                            <option value="random">Random Value</option>
+                        </select>
+                    </div>
+                    
+                    <div id="autoInput" class="mb-3" style="display: none;">
+                        <label for="num_records" class="form-label">Number of records to generate</label>
+                        <input type="number" class="form-control" id="num_records" name="num_records" value="10" min="1" max="100">
+                        <div class="form-text">Random data types will be generated</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">Submit Data</button>
+                    <button type="button" id="generateApiBtn" class="btn btn-info">Generate via API</button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const autoGenerate = document.getElementById('autoGenerate');
+    const manualInput = document.getElementById('manualInput');
+    const autoInput = document.getElementById('autoInput');
+    const generateApiBtn = document.getElementById('generateApiBtn');
+    
+    // Toggle between manual and auto input
+    autoGenerate.addEventListener('change', function() {
+        manualInput.style.display = this.checked ? 'none' : 'block';
+        autoInput.style.display = this.checked ? 'block' : 'none';
+    });
+    
+    // Handle API generation
+    generateApiBtn.addEventListener('click', function() {
+        const deviceSelect = document.getElementById('device_id');
+        if (!deviceSelect.value) {
+            alert('Please select a device first');
+            deviceSelect.focus();
+            return;
+        }
+        
+        const numRecords = document.getElementById('num_records')?.value || 10;
+        
+        fetch('/api/generate-data/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                device_id: deviceSelect.value,
+                num_records: numRecords
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || 'Request failed'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            alert(data.message);
+            window.location.href = "{% url 'dashboard' %}";
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    });
+});
+</script>
+{% endblock %}
