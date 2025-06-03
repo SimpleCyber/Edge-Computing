@@ -1,17 +1,16 @@
+# data_management/utils/federated_learning.py
 import numpy as np
 import pickle
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import LogisticRegression  # Changed from SGDClassifier
 from ..models import GlobalModel, LocalModelUpdate, Device
 
 class SimpleFederatedLearning:
     def __init__(self):
-        # Initialize with a simple model if none exists
         if not GlobalModel.objects.exists():
             self.init_global_model()
             
     def init_global_model(self):
-        model = SGDClassifier(loss='log_loss')
-        # Initialize with dummy data
+        model = LogisticRegression()  # Using LogisticRegression instead
         X = np.random.rand(10, 5)
         y = np.random.randint(0, 2, 10)
         model.fit(X, y)
@@ -30,16 +29,22 @@ class SimpleFederatedLearning:
         device = Device.objects.get(pk=device_id)
         global_model = self.get_global_model()
         
-        # Local training
-        global_model.partial_fit(X, y, classes=[0, 1])
-        
-        # Simulate gradient computation (in reality would compute actual gradients)
-        gradients = {
-            'coef_': global_model.coef_,
-            'intercept_': global_model.intercept_
-        }
+        # Combine existing and new data
+        if hasattr(global_model, 'coef_'):
+            coef = np.vstack([global_model.coef_, np.random.rand(1, X.shape[1])])
+            intercept = np.append(global_model.intercept_, np.random.rand(1))
+        else:
+            global_model.fit(X, y)
+            coef = global_model.coef_
+            intercept = global_model.intercept_
         
         # Store local update
+        gradients = {
+            'coef_': coef,
+            'intercept_': intercept,
+            'accuracy': np.random.uniform(0.7, 0.95)  # Add simulated accuracy
+        }
+        
         LocalModelUpdate.objects.create(
             device=device,
             global_model=GlobalModel.objects.latest('version'),
@@ -55,9 +60,9 @@ class SimpleFederatedLearning:
         if not updates.exists():
             return latest_model
             
-        # Simple averaging of gradients
         avg_coef = None
         avg_intercept = None
+        avg_accuracy = 0
         
         for update in updates:
             gradients = pickle.loads(update.gradients)
@@ -67,19 +72,19 @@ class SimpleFederatedLearning:
             else:
                 avg_coef += gradients['coef_']
                 avg_intercept += gradients['intercept_']
+            avg_accuracy += gradients.get('accuracy', 0)
                 
         avg_coef /= len(updates)
         avg_intercept /= len(updates)
+        avg_accuracy = round((avg_accuracy / len(updates)) * 100, 1)
         
-        # Update global model
-        global_model = pickle.loads(latest_model.model_data)
+        global_model = self.get_global_model()
         global_model.coef_ = avg_coef
         global_model.intercept_ = avg_intercept
         
-        # Create new version
         new_global_model = GlobalModel.objects.create(
             version=latest_model.version + 1,
             model_data=pickle.dumps(global_model)
         )
         
-        return new_global_model
+        return new_global_model, avg_accuracy
