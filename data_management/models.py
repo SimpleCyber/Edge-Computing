@@ -35,6 +35,7 @@ class GlobalModel(models.Model):
     model_data = models.BinaryField()  # Serialized ML model
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    accuracy = models.FloatField(null=True, blank=True)
 
 class LocalModelUpdate(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE)

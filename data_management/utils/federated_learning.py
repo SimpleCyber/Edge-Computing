@@ -42,7 +42,7 @@ class SimpleFederatedLearning:
         gradients = {
             'coef_': coef,
             'intercept_': intercept,
-            'accuracy': np.random.uniform(0.7, 0.95)  # Add simulated accuracy
+            'accuracy': np.random.uniform(0.7, 0.95)
         }
         
         LocalModelUpdate.objects.create(
@@ -84,7 +84,8 @@ class SimpleFederatedLearning:
         
         new_global_model = GlobalModel.objects.create(
             version=latest_model.version + 1,
-            model_data=pickle.dumps(global_model)
+            model_data=pickle.dumps(global_model),
+            accuracy=avg_accuracy
         )
         
         return new_global_model, avg_accuracy

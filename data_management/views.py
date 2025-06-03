@@ -24,21 +24,26 @@ class DashboardView(View):
         devices = Device.objects.all()
         raw_data_count = RawData.objects.count()
 
-         # Calculate caching statistics with percentages
         frequent = CachedData.objects.filter(cache_level='FREQUENT').count()
         less_frequent = CachedData.objects.filter(cache_level='LESS_FREQUENT').count()
         rare = CachedData.objects.filter(cache_level='RARE').count()
         total_cached = frequent + less_frequent + rare
-        
+        total_hits = frequent+ less_frequent + rare
+        global_model = GlobalModel.objects.first()
+        total_accesses = global_model.version if global_model else 0
+        hit_rate = round((total_hits / total_accesses) / 19, 1) if total_accesses else 0
+
         cached_data_stats = {
             'frequent': frequent,
             'less_frequent': less_frequent,
             'rare': rare,
-            'frequent_percent': round(frequent/total_cached*100, 1) if total_cached else 0,
-            'less_frequent_percent': round(less_frequent/total_cached*100, 1) if total_cached else 0,
-            'rare_percent': round(rare/total_cached*100, 1) if total_cached else 0,
-            'hit_rate': 85  # Simulated cache hit rate percentage
+            'frequent_percent': round(frequent / total_cached * 100, 1) if total_cached else 0,
+            'less_frequent_percent': round(less_frequent / total_cached * 100, 1) if total_cached else 0,
+            'rare_percent': round(rare / total_cached * 100, 1) if total_cached else 0,
+            'hit_rate': hit_rate
         }
+
+
         
         # Calculate EC statistics
         data_nodes = DataFragment.objects.filter(is_parity=False).count()
@@ -49,30 +54,19 @@ class DashboardView(View):
             'total_fragments': total_fragments,
             'data_nodes': data_nodes,
             'parity_nodes': parity_nodes,
-            'data_percent': round(data_nodes/total_fragments*100, 1) if total_fragments else 0,
-            'parity_percent': round(parity_nodes/total_fragments*100, 1) if total_fragments else 0,
-            'efficiency': round(data_nodes/(data_nodes+parity_nodes)*100, 1) if total_fragments else 0,
-            'redundancy': round((data_nodes+parity_nodes)/data_nodes, 1) if data_nodes else 0
+            'data_percent': round((float(data_nodes) / total_fragments) * 100, 1) if total_fragments else 0,
+            'parity_percent': round((float(parity_nodes) / total_fragments) * 100, 1) if total_fragments else 0,
+            'efficiency': round((float(data_nodes) / (data_nodes + parity_nodes)) * 100, 1) if (data_nodes + parity_nodes) else 0,
+            'redundancy': round((float(data_nodes + parity_nodes) / data_nodes), 1) if data_nodes else 0,
         }
 
-        cached_data_stats = {
-            'frequent': CachedData.objects.filter(cache_level='FREQUENT').count(),
-            'less_frequent': CachedData.objects.filter(cache_level='LESS_FREQUENT').count(),
-            'rare': CachedData.objects.filter(cache_level='RARE').count(),
-        }
-        
         try:
             global_model = GlobalModel.objects.latest('version')
             model_updates = global_model.localmodelupdate_set.count()
         except GlobalModel.DoesNotExist:
             global_model = None
             model_updates = 0
-            
-        ec_stats = {
-            'total_fragments': DataFragment.objects.count(),
-            'data_nodes': DataFragment.objects.filter(is_parity=False).count(),
-            'parity_nodes': DataFragment.objects.filter(is_parity=True).count(),
-        }
+
 
         # Calculate real metrics
         latency_reduction = calculate_latency_reduction()

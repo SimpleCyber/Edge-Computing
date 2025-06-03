@@ -58,11 +58,17 @@
                 <p><strong>Frequent Data:</strong> {{ cached_data_stats.frequent }} ({{ cached_data_stats.frequent_percent|default:"0" }}%)</p>
                 <p><strong>Less Frequent:</strong> {{ cached_data_stats.less_frequent }} ({{ cached_data_stats.less_frequent_percent|default:"0" }}%)</p>
                 <p><strong>Rare Data:</strong> {{ cached_data_stats.rare }} ({{ cached_data_stats.rare_percent|default:"0" }}%)</p>
+
+                
+
                 <div class="progress mt-2">
                     <div class="progress-bar bg-success" role="progressbar" style="width: {{ cached_data_stats.frequent_percent|default:"0" }}%"></div>
                     <div class="progress-bar bg-warning" role="progressbar" style="width: {{ cached_data_stats.less_frequent_percent|default:"0" }}%"></div>
                     <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ cached_data_stats.rare_percent|default:"0" }}%"></div>
                 </div>
+
+
+
                 <p class="small mt-2"><strong>Cache Hit Rate:</strong> {{ cached_data_stats.hit_rate|default:"0" }}%</p>
             </div>
         </div>
@@ -80,7 +86,7 @@
                     <p><strong>Model Version:</strong> {{ global_model.version }}</p>
                     <p><strong>Last Updated:</strong> {{ global_model.updated_at|timesince }} ago</p>
                     <p><strong>Local Updates:</strong> {{ model_updates }}</p>
-                    <p><strong>Accuracy:</strong> {{ model_stats.accuracy|default:"N/A" }}%</p>
+                    <p><strong>Accuracy:</strong> {{ global_model.accuracy|default:"N/A" }}%</p>
                 {% else %}
                     <p>No global model initialized</p>
                 {% endif %}
