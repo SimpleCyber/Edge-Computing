@@ -9,8 +9,21 @@ import time
 import numpy as np
 from datetime import datetime
 from .models import Device, RawData, CachedData, DataFragment, GlobalModel, PerformanceMetrics
+from django.db.models import Sum
+from .utils.caching import HierarchicalCache
+from .utils.erasure_coding import store_with_ec, recover_data
+from .utils.federated_learning import SimpleFederatedLearning
+from django.utils import timezone
+from datetime import timedelta
 
-# First define the base View classes to avoid circular imports
+def update_last_active_if_needed(device):
+    now = timezone.now()
+    if not device.last_active or (now - device.last_active) > timedelta(hours=1):
+        device.last_active = now
+        device.save()
+
+
+
 
 # Create dummy devices if none exist
 if not Device.objects.exists():
@@ -20,18 +33,19 @@ if not Device.objects.exists():
 
 class DashboardView(View):
     def get(self, request):
-        
         devices = Device.objects.all()
         raw_data_count = RawData.objects.count()
 
-        frequent = CachedData.objects.filter(cache_level='FREQUENT').count()
-        less_frequent = CachedData.objects.filter(cache_level='LESS_FREQUENT').count()
-        rare = CachedData.objects.filter(cache_level='RARE').count()
+        # Get cache statistics
+        cache_stats = CachedData.objects.all()
+        frequent = cache_stats.filter(cache_level='FREQUENT').count()
+        less_frequent = cache_stats.filter(cache_level='LESS_FREQUENT').count()
+        rare = cache_stats.filter(cache_level='RARE').count()
         total_cached = frequent + less_frequent + rare
-        total_hits = frequent+ less_frequent + rare
-        global_model = GlobalModel.objects.first()
-        total_accesses = global_model.version if global_model else 0
-        hit_rate = round((total_hits / total_accesses) / 19, 1) if total_accesses else 0
+        
+        # Calculate hit rates (simplified for demo)
+        total_accesses = frequent * 3 + less_frequent * 2 + rare * 1  # Weighted accesses
+        hit_rate = round((frequent * 3 + less_frequent * 2 + rare * 1) / (total_accesses or 1) * 100, 1)
 
         cached_data_stats = {
             'frequent': frequent,
@@ -95,23 +109,22 @@ class ProcessDataView(View):
         # 1. Federated Learning Aggregation
         processes.append("Starting Federated Learning aggregation...")
         fl = SimpleFederatedLearning()
-        new_model, accuracy = fl.aggregate_updates()  # Updated to include accuracy
+        new_model, accuracy = fl.aggregate_updates()
         processes.append(f"Federated Learning completed - new global model version {new_model.version}")
         processes.append(f"Model accuracy: {accuracy}%")
         
-        # 2. Data Recovery Example
+        # 2. Cache Migration based on FL
+        processes.append("Migrating cache based on federated learning stage...")
+        cache = HierarchicalCache()
+        cache.migrate_data_based_on_fl(new_model.version)
+        processes.append("Cache migration completed")
+        
+        # 3. Data Recovery Example
         raw_data = RawData.objects.filter(is_processed=True).first()
         if raw_data:
             processes.append(f"Attempting data recovery for record ID {raw_data.id}...")
             recovered = recover_data(raw_data.id)
             processes.append("Data recovery successful" if recovered else "Data recovery failed")
-        
-        # 3. Update cache statistics
-        cache = HierarchicalCache()
-        processes.append("Updating cache hierarchy...")
-        for raw_data in RawData.objects.all():
-            cache.cache_data(raw_data.id, raw_data.data)
-        processes.append("Cache hierarchy updated")
         
         return JsonResponse({
             'status': 'success',
@@ -119,30 +132,8 @@ class ProcessDataView(View):
             'accuracy': accuracy
         })
 
-# Then import utility functions after the View classes are defined
-from .utils.caching import HierarchicalCache
-from .utils.erasure_coding import store_with_ec, recover_data
-from .utils.federated_learning import SimpleFederatedLearning
 
-class SimulateDeviceView(View):
-    def get(self, request):
-        devices = Device.objects.all()
-        return render(request, 'data_management/device_input.html', {
-            'devices': devices,
-            'auto_generate': request.GET.get('auto') == 'true'
-        })
-        
-    def post(self, request):
-        device_id = request.POST.get('device_id')
-        data_type = request.POST.get('data_type')
-        auto_generate = request.POST.get('auto_generate') == 'on'
-        num_records = int(request.POST.get('num_records', 10))
-        
-        if auto_generate:
-            return self.auto_generate_data(device_id, num_records)
-        else:
-            return self.manual_generate_data(device_id, data_type)
-    
+
 
 
 class SimulateDeviceView(View):
@@ -161,6 +152,9 @@ class SimulateDeviceView(View):
         data_type = request.POST.get('data_type')
         auto_generate = request.POST.get('auto_generate') == 'on'
         num_records = int(request.POST.get('num_records', 10))
+        
+        device = Device.objects.get(id=device_id)
+        update_last_active_if_needed(device)
         
         if auto_generate:
             return self.auto_generate_data(device_id, num_records)

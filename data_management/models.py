@@ -1,10 +1,18 @@
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 class Device(models.Model):
     name = models.CharField(max_length=100)
     device_type = models.CharField(max_length=50)
     location = models.CharField(max_length=100)
-    last_active = models.DateTimeField(auto_now=True)
+    last_active = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        now = timezone.now()
+        if not self.last_active or (now - self.last_active) > timedelta(hours=1):
+            self.last_active = now
+        super().save(*args, **kwargs)
 
 class RawData(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE)
@@ -27,7 +35,7 @@ class DataFragment(models.Model):
     original_data = models.ForeignKey(RawData, on_delete=models.CASCADE)
     fragment_id = models.CharField(max_length=10)
     fragment_data = models.BinaryField()
-    storage_node = models.CharField(max_length=100)  # Simulate different edge nodes
+    storage_node = models.CharField(max_length=100) 
     is_parity = models.BooleanField(default=False)
 
 class GlobalModel(models.Model):
@@ -44,7 +52,6 @@ class LocalModelUpdate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
-# Add to models.py
 class PerformanceMetrics(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     edge_processing_time = models.FloatField()  # in milliseconds
