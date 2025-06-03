@@ -1,5 +1,7 @@
 import numpy as np
 from typing import List, Tuple
+import json
+import base64
 from ..models import DataFragment, RawData
 
 class ReedSolomonEC:
@@ -48,14 +50,26 @@ class ReedSolomonEC:
         # Decode original chunks
         original_chunks = np.dot(inv_decoding_matrix, fragment_data) % 256
         
-        # Combine chunks
+        # Combine chunks and remove padding
         original_data = b''.join(bytes(chunk) for chunk in original_chunks)
         return original_data.rstrip(b'\0')
 
-# erasure_coding.py
 def store_with_ec(raw_data_id):
     raw_data = RawData.objects.get(pk=raw_data_id)
-    data_bytes = str(raw_data.data).encode('utf-8')
+    
+    # Convert data to JSON and then to bytes for more reliable encoding
+    try:
+        if isinstance(raw_data.data, str):
+            # If it's already a string, parse it first to ensure valid JSON
+            data_obj = json.loads(raw_data.data)
+        else:
+            data_obj = raw_data.data
+        
+        data_bytes = json.dumps(data_obj).encode('utf-8')
+    except (TypeError, json.JSONDecodeError):
+        # Fallback to string representation if not JSON serializable
+        data_bytes = str(raw_data.data).encode('utf-8')
+    
     original_size = len(data_bytes)
     
     ec = ReedSolomonEC(k=4, m=2)
@@ -77,16 +91,32 @@ def store_with_ec(raw_data_id):
     return efficiency
 
 def recover_data(raw_data_id):
-    fragments = list(DataFragment.objects.filter(original_data_id=raw_data_id)
-                    .values_list('fragment_id', 'fragment_data'))
+    fragments = list(DataFragment.objects.filter(original_data_id=raw_data_id))
     
     if not fragments:
         return None
         
+    # Get fragment data as (id, data) tuples
+    fragment_data = [(f.fragment_id, f.fragment_data) for f in fragments]
+    
     ec = ReedSolomonEC(k=4, m=2)
     try:
-        recovered_data = ec.decode(fragments)
-        return recovered_data.decode('utf-8')
+        recovered_bytes = ec.decode(fragment_data)
+        
+        # First try to decode as JSON
+        try:
+            recovered_str = recovered_bytes.decode('utf-8')
+            return json.loads(recovered_str)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            # If not valid JSON, return as base64 encoded string
+            return {
+                'binary_data': base64.b64encode(recovered_bytes).decode('ascii'),
+                'message': 'Data recovered but not in UTF-8 format, returned as base64'
+            }
+            
     except ValueError as e:
         print(f"Recovery failed: {str(e)}")
-        return None
+        return {
+            'error': str(e),
+            'message': 'Data recovery failed'
+        }
