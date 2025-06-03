@@ -9,7 +9,7 @@ import time
 import numpy as np
 from datetime import datetime
 from .models import Device, RawData, CachedData, DataFragment, GlobalModel, PerformanceMetrics
-from django.db.models import Sum
+from django.db.models import Sum,Count, Q, Avg
 from .utils.caching import HierarchicalCache
 from .utils.erasure_coding import store_with_ec, recover_data
 from .utils.federated_learning import SimpleFederatedLearning
@@ -344,3 +344,35 @@ def calculate_storage_efficiency():
                 processed_data.add(fragment.original_data_id)
     
     return round(total_efficiency / len(processed_data), 1) if processed_data else round(random.uniform(45, 55), 1)
+
+
+
+class SystemHealthView(View):
+    def get(self, request):
+        # Calculate health metrics from processed data
+        fragment_health = DataFragment.objects.values('storage_node').annotate(
+            total=Count('id'),
+            parity=Count('id', filter=Q(is_parity=True))
+        )
+        
+        cache_health = CachedData.objects.values('cache_level').annotate(
+            count=Count('id'),
+            avg_access=Avg('access_count')
+        )
+        
+        return JsonResponse({
+            'fragment_distribution': list(fragment_health),
+            'cache_performance': list(cache_health),
+            'storage_efficiency': calculate_storage_efficiency(),
+            'recovery_confidence': self.calculate_recovery_confidence()
+        })
+    
+    def calculate_recovery_confidence(self):
+        # Calculate probability of successful recovery
+        total_data = RawData.objects.count()
+        recoverable = 0
+        for data in RawData.objects.all():
+            fragments = DataFragment.objects.filter(original_data=data)
+            if fragments.count() >= 4:  # Minimum fragments needed
+                recoverable += 1
+        return round((recoverable / total_data) * 100, 1) if total_data else 0
