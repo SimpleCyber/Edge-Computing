@@ -197,8 +197,19 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         // Make AJAX call
-        fetch("{% url 'process_data' %}")
-            .then(response => response.json())
+       fetch("{% url 'process_data' %}", {
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.status === 'success') {
                     let logContent = '<ul class="list-group">';
@@ -227,6 +238,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             });
+
+
     });
 });
 </script>
