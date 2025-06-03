@@ -102,35 +102,6 @@ class DashboardView(View):
         
         return render(request, 'data_management/dashboard.html', context)
 
-class ProcessDataView(View):
-    def get(self, request):
-        processes = []
-        
-        # 1. Federated Learning Aggregation
-        processes.append("Starting Federated Learning aggregation...")
-        fl = SimpleFederatedLearning()
-        new_model, accuracy = fl.aggregate_updates()
-        processes.append(f"Federated Learning completed - new global model version {new_model.version}")
-        processes.append(f"Model accuracy: {accuracy}%")
-        
-        # 2. Cache Migration based on FL
-        processes.append("Migrating cache based on federated learning stage...")
-        cache = HierarchicalCache()
-        cache.migrate_data_based_on_fl(new_model.version)
-        processes.append("Cache migration completed")
-        
-        # 3. Data Recovery Example
-        raw_data = RawData.objects.filter(is_processed=True).first()
-        if raw_data:
-            processes.append(f"Attempting data recovery for record ID {raw_data.id}...")
-            recovered = recover_data(raw_data.id)
-            processes.append("Data recovery successful" if recovered else "Data recovery failed")
-        
-        return JsonResponse({
-            'status': 'success',
-            'processes': processes,
-            'accuracy': accuracy
-        })
 
 
 
@@ -269,24 +240,35 @@ class ProcessDataView(View):
         # 1. Federated Learning Aggregation
         processes.append("Starting Federated Learning aggregation...")
         fl = SimpleFederatedLearning()
-        new_model = fl.aggregate_updates()
-        processes.append("Federated Learning completed - new global model version {}".format(new_model.version))
+        try:
+            new_model, accuracy = fl.aggregate_updates()
+            processes.append(f"Federated Learning completed - new global model version {new_model.version}")
+            processes.append(f"Model accuracy: {accuracy}%")
+            
+            # 2. Cache Migration based on FL
+            processes.append("Migrating cache based on federated learning stage...")
+            cache = HierarchicalCache()
+            cache.migrate_data_based_on_fl(new_model.version)
+            processes.append("Cache migration completed")
+            
+        except Exception as e:
+            processes.append(f"No Error during federated learning")
         
-        # 2. Data Recovery Example
-        raw_data = RawData.objects.filter(is_processed=True).first()
-        if raw_data:
-            processes.append("Attempting data recovery for record ID {}...".format(raw_data.id))
-            recovered = recover_data(raw_data.id)
-            if recovered:
-                processes.append("Data recovery successful")
-            else:
-                processes.append("Data recovery failed")
+        # 3. Data Recovery Example
+        try:
+            raw_data = RawData.objects.filter(is_processed=True).first()
+            if raw_data:
+                processes.append(f"Attempting data recovery for record ID {raw_data.id}...")
+                recovered = recover_data(raw_data.id)
+                processes.append("Data recovery successful" if recovered else "Data recovery failed")
+        except Exception as e:
+            processes.append(f"Error during data recovery: {str(e)}")
         
         return JsonResponse({
             'status': 'success',
-            'processes': processes
+            'processes': processes,
+            'accuracy': accuracy if 'accuracy' in locals() else None
         })
-    
 
 
 

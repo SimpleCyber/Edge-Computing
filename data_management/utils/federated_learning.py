@@ -1,7 +1,7 @@
 # data_management/utils/federated_learning.py
 import numpy as np
 import pickle
-from sklearn.linear_model import LogisticRegression  # Changed from SGDClassifier
+from sklearn.linear_model import LogisticRegression  
 from ..models import GlobalModel, LocalModelUpdate, Device
 
 class SimpleFederatedLearning:
@@ -10,7 +10,8 @@ class SimpleFederatedLearning:
             self.init_global_model()
             
     def init_global_model(self):
-        model = LogisticRegression()  # Using LogisticRegression instead
+        # Using LogisticRegression instead of SGDClassifier for better stability
+        model = LogisticRegression()
         X = np.random.rand(10, 5)
         y = np.random.randint(0, 2, 10)
         model.fit(X, y)
@@ -58,8 +59,10 @@ class SimpleFederatedLearning:
         updates = LocalModelUpdate.objects.filter(global_model=latest_model)
         
         if not updates.exists():
-            return latest_model
-            
+            # Return current model with its existing accuracy
+            return latest_model, latest_model.accuracy or 0.0
+        
+        # Calculate averages as before
         avg_coef = None
         avg_intercept = None
         avg_accuracy = 0
