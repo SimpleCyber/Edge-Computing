@@ -1,5 +1,7 @@
 Django
-djangorestframework
-gunicorn
-numpy
 scikit-learn
+joblib
+numpy
+scipy
+psycopg2-binary
+gunicorn
