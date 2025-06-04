@@ -7,13 +7,13 @@ services:
     repo: https://github.com/SimpleCyber/Edge-Computing
     branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn your_project_name.wsgi:application --bind 0.0.0.0:8000
+    startCommand: gunicorn edge_system.wsgi:application --bind 0.0.0.0:8000
     preDeployCommand: python manage.py migrate
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:
       - key: DJANGO_SETTINGS_MODULE
-        value: your_project_name.settings
+        value: edge_system.settings
       - key: SECRET_KEY
         value: your-secret-key
       - key: DEBUG
