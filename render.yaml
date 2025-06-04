@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: edge-computing
+    env: python
+    region: singapore
+    plan: free
+    repo: https://github.com/SimpleCyber/Edge-Computing
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn your_project_name.wsgi:application --bind 0.0.0.0:8000
+    preDeployCommand: python manage.py migrate
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: your_project_name.settings
+      - key: SECRET_KEY
+        value: your-secret-key
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: edge-computing.onrender.com
+      # Add more environment variables like database credentials here
